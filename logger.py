@@ -17,7 +17,7 @@ def transform_movements(data, sid, controller):
     for timestamp, x, y, z, yaw, pitch, roll, r_x, r_y, r_z in zip(data["time"], data['x'], data['y'], data['z'],
                                                                    data['yaw'], data['pitch'], data['roll'],
                                                                    data['r_x'], data['r_y'], data['r_z']):
-        movements.append({
+        rtn.append({
             "session_id": sid,
             "timestamp": timestamp,
             "controller_id": controller,
@@ -39,7 +39,7 @@ def trigger_pressed(device):
     return device.get_controller_inputs()['trigger'] > 0
 
 
-def sample(device, num_samples, sample_rate):
+def sample(device, num_samples, sample_rate, session_id):
     interval = 1 / sample_rate
     poses = vr.pose_sample_buffer()
     input_states = []
@@ -51,6 +51,7 @@ def sample(device, num_samples, sample_rate):
         poses.append(pose[device.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
         input_states.append(device.get_controller_inputs())
         input_states[i]['timestamp'] = time.time() - sample_start
+        input_states[i]['session_id'] = session_id
         print(input_states[i]['trigger'])
         i += 1
         sleep_time = interval - (time.time() - start)
@@ -59,6 +60,7 @@ def sample(device, num_samples, sample_rate):
     return poses, input_states
 
 
+sid = uuid.uuid4().hex[0:sid_length]
 try:
     v = vr.triad_openvr()
 
@@ -66,7 +68,9 @@ try:
         print('waiting for input... %f' % v.devices["controller_2"].get_controller_inputs()['trigger'])
         time.sleep(0.1)
 
-    data, buttons = sample(v.devices["controller_2"], 150, 60)
+        v.devices["controller_2"].trigger_haptic_pulse()
+
+    data, buttons = sample(v.devices["controller_2"], 150, 60, sid)
 except:
     print('VR error, using example data...')
     f = open('example_movements.json', 'r')
@@ -83,8 +87,8 @@ api_client = swagger_client.LoggerApi()
 # f = open("buttons.json", "w")
 # json.dump(buttons, f)
 # f.close()
-sid = uuid.uuid4().hex[0:sid_length]
-movements = transform_movements(data, sid, "controller_2")
+
+movements = transform_movements(data.__dict__, sid, "controller_2")
 print(movements)
 
 try:
