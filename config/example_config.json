@@ -1,0 +1,15 @@
+{
+  "sid_length": 16,
+  "sample_rate": 60,
+  "api_host": "https://team12-19.studenti.fiit.stuba.sk/api",
+  "button": "trigger",
+  "button_options": [
+    "trigger",
+    "ulButtonPressed",
+    "ulButtonTouched",
+    "trackpad_pressed",
+    "trackpad_touched",
+    "menu_button",
+    "grip_button"
+  ]
+}

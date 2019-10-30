@@ -8,7 +8,23 @@ from swagger_client.rest import ApiException
 
 import triad_openvr as vr
 
-sid_length = 16
+config = None
+
+try:
+    with open('config/config.json', 'r') as file:
+        config = json.load(file)
+except FileNotFoundError:
+    print('Could not load config.json.')
+
+sid_length = config['sid_length']
+sampling_rate = config['sample_rate']
+api_host = config['api_host']
+button = config['button']
+button_options = config['button_options']
+if button not in button_options:
+    print("Button " + button + "not supported. Using trigger.")
+    button = 'trigger'
+    print("Supported buttons: " + button_options)
 
 
 def transform_movements(data, sid, controller):
@@ -36,7 +52,7 @@ def transform_movements(data, sid, controller):
 
 
 def trigger_pressed(device):
-    return device.get_controller_inputs()['trigger'] > 0
+    return device.get_controller_inputs()[button] > 0
 
 
 def sample(device, num_samples, sample_rate, session_id):
@@ -65,12 +81,12 @@ try:
     v = vr.triad_openvr()
 
     while not (trigger_pressed(v.devices["controller_2"]) or trigger_pressed(v.devices["controller_1"])):
-        print('waiting for input... %f' % v.devices["controller_2"].get_controller_inputs()['trigger'])
+        print('waiting for input... %f' % v.devices["controller_2"].get_controller_inputs()[button])
         time.sleep(0.1)
 
         v.devices["controller_2"].trigger_haptic_pulse()
 
-    data, buttons = sample(v.devices["controller_2"], 150, 60, sid)
+    data, buttons = sample(v.devices["controller_2"], 150, sampling_rate, sid)
 except:
     print('VR error, using example data...')
     f = open('example_movements.json', 'r')
@@ -92,7 +108,7 @@ movements = transform_movements(data.__dict__, sid, "controller_2")
 print(movements)
 
 try:
-    api_client.api_client.configuration.host = "https://team12-19.studenti.fiit.stuba.sk/api"
+    api_client.api_client.configuration.host = api_host
     api_response = api_client.post_logger_record(payload={"movements": movements, "buttons": buttons})
     pprint(api_response)
 except ApiException as e:
