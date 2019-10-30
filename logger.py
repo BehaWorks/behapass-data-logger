@@ -73,20 +73,13 @@ try:
     data, buttons = sample(v.devices["controller_2"], 150, 60, sid)
 except:
     print('VR error, using example data...')
-    f = open('example_movements.json', 'r')
+    f = open('data/example_movements.json', 'r')
     data = json.load(f)
-    f = open("example_buttons.json", "r")
+    f = open("data/example_buttons.json", "r")
     buttons = json.load(f)
     f.close()
 
 api_client = swagger_client.LoggerApi()
-
-# f = open("vr_data.json", "w")
-# json.dump(data.__dict__, f)
-# f.close()
-# f = open("buttons.json", "w")
-# json.dump(buttons, f)
-# f.close()
 
 movements = transform_movements(data.__dict__, sid, "controller_2")
 print(movements)
