@@ -110,23 +110,16 @@ try:
     movements = transform_movements(data.__dict__, sid, controller_serial)
 except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
-    f = open('example_movements.json', 'r')
+    f = open('data/example_movements.json', 'r')
     data = json.load(f)
     movements = transform_movements(data, "TEST_SESSION", "EXAMPLE")
-    f = open("example_buttons.json", "r")
+    f = open("data/example_buttons.json", "r")
     buttons = json.load(f)
     f.close()
 
 api_client = swagger_client.LoggerApi()
 
-f = open("vr_data.json", "w")
-json.dump(data.__dict__, f)
-f.close()
-f = open("buttons.json", "w")
-json.dump(buttons, f)
-f.close()
-
-pprint(movements)
+print(movements)
 
 try:
     api_client.api_client.configuration.host = api_host
