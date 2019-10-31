@@ -2,6 +2,7 @@ import json
 import uuid
 from pprint import pprint
 
+import openvr
 import swagger_client
 import time
 from swagger_client.rest import ApiException
@@ -51,24 +52,32 @@ def transform_movements(data, sid, controller):
     return rtn
 
 
-def trigger_pressed(device):
-    return device.get_controller_inputs()[button] > 0
+def recording_device(devices):
+    for d in devices:
+        if d.get_controller_inputs()[button] > 0:
+            return d
+
+    return None
 
 
-def sample(device, num_samples, sample_rate, session_id):
+def is_recording(d):
+    return d.get_controller_inputs()[button] > 0
+
+
+def sample(vr_device, num_samples, sample_rate, session_id):
     interval = 1 / sample_rate
     poses = vr.pose_sample_buffer()
     input_states = []
     sample_start = time.time()
     i = 0
-    while trigger_pressed(v.devices["controller_2"]) or trigger_pressed(v.devices["controller_1"]):
+    while is_recording(vr_device):
         start = time.time()
-        pose = vr.get_pose(device.vr)
-        poses.append(pose[device.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
-        input_states.append(device.get_controller_inputs())
+        pose = vr.get_pose(vr_device.vr)
+        poses.append(pose[vr_device.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
+        input_states.append(vr_device.get_controller_inputs())
         input_states[i]['timestamp'] = time.time() - sample_start
         input_states[i]['session_id'] = session_id
-        print(input_states[i]['trigger'])
+        input_states[i]['controller_id'] = controller_serial
         i += 1
         sleep_time = interval - (time.time() - start)
         if sleep_time > 0:
@@ -77,35 +86,47 @@ def sample(device, num_samples, sample_rate, session_id):
 
 
 sid = uuid.uuid4().hex[0:sid_length]
+device = None
 try:
     v = vr.triad_openvr()
 
-    while not (trigger_pressed(v.devices["controller_2"]) or trigger_pressed(v.devices["controller_1"])):
-        print('waiting for input... %f' % v.devices["controller_2"].get_controller_inputs()[button])
+    print("Finding controllers...")
+    controllers = []
+    for object_name in v.object_names['Controller']:
+        controllers.append(v.devices[object_name])
+    if len(controllers) is 0:
+        print('No controller found. Exiting.')
+        exit(2)
+
+    print('Waiting for input... Press recording button to start recording movement. Release to stop.')
+    while device is None:
         time.sleep(0.1)
+        device = recording_device(controllers)
 
-        v.devices["controller_2"].trigger_haptic_pulse()
-
-    data, buttons = sample(v.devices["controller_2"], 150, sampling_rate, sid)
-except:
-    print('VR error, using example data...')
+    controller_serial = device.get_serial()
+    print("Recording movement on controller " + controller_serial)
+    data, buttons = sample(device, 150, sampling_rate, sid)
+    print("Recording stopped")
+    movements = transform_movements(data.__dict__, sid, controller_serial)
+except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
+    print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
     f = open('example_movements.json', 'r')
     data = json.load(f)
+    movements = transform_movements(data, "TEST_SESSION", "EXAMPLE")
     f = open("example_buttons.json", "r")
     buttons = json.load(f)
     f.close()
 
 api_client = swagger_client.LoggerApi()
 
-# f = open("vr_data.json", "w")
-# json.dump(data.__dict__, f)
-# f.close()
-# f = open("buttons.json", "w")
-# json.dump(buttons, f)
-# f.close()
+f = open("vr_data.json", "w")
+json.dump(data.__dict__, f)
+f.close()
+f = open("buttons.json", "w")
+json.dump(buttons, f)
+f.close()
 
-movements = transform_movements(data.__dict__, sid, "controller_2")
-print(movements)
+pprint(movements)
 
 try:
     api_client.api_client.configuration.host = api_host
