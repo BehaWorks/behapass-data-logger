@@ -1,8 +1,8 @@
 # Logger - Client
-Aplikácia na zbieranie údajov z VR ovládačov a ich odosielanie na server. Súčasť projekktu [BehaPass](http://labss2.fiit.stuba.sk/TeamProject/2019/team12/)
+Aplikácia na zbieranie údajov z VR ovládačov a ich odosielanie na server. Súčasť projektu [BehaPass](http://labss2.fiit.stuba.sk/TeamProject/2019/team12/).
 
 ## Inštalácia
-Podporovaná verzia Python 3.5+  
+Podporovaná verzia Python 3.5+.  
 Pre správne fungovanie treba mať nainštalované [SteamVR](https://store.steampowered.com/app/250820/SteamVR/). Bez toho aplikácia len pošle ukážkové dáta na server (test API).  
 
 1. Naklonovať tento repozitár (`git clone https://bitbucket.org/behaworks/logger-client.git`).  
@@ -25,7 +25,7 @@ Konfiguračný súbor `config/config.json`obsahuje nasledovné polia:
 * `sample_rate` - Vzorkovacia frekvencia snímaného pohybu,  
 * `api_host` - URL, kde sa nachádza logovacie API,  
 * `button` - Tlačidlo, ktorým sa ovláda nahrávanie pohybu. Pokiaľ sa zadá neplatná hodnota, používa sa `trigger`,  
-* `button_options` - **Nemeniť.** Možnosti pre pole `button` (opisy pre ovádače HTC Vive):  
+* `button_options` - **Nemeniť.** Možnosti pre pole `button` (opisy pre ovládače HTC Vive):  
     * `trigger` - spúšť na spodnej strane ovládača, to čo sa dá spojito stláčať,
     * `ulButtonPressed` - stlačenie hociktorého tlačidla,  
     * `ulButtonTouched` - dotyk hociktorého tlačidla (trigger a trackpad),  
