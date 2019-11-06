@@ -34,10 +34,11 @@ def transform_movements(data, sid, controller, user_id):
     for timestamp, x, y, z, yaw, pitch, roll, r_x, r_y, r_z in zip(data["time"], data['x'], data['y'], data['z'],
                                                                    data['yaw'], data['pitch'], data['roll'],
                                                                    data['r_x'], data['r_y'], data['r_z']):
-        rtn.append({"session_id": sid})
+
+        dict = {"session_id": sid}
         if user_id is not None:
-            rtn.append({"user_id": user_id})
-        rtn.append({
+            dict.update({"user_id": user_id})
+        dict.update({
             "session_id": sid,
             "timestamp": timestamp,
             "controller_id": controller,
@@ -51,6 +52,7 @@ def transform_movements(data, sid, controller, user_id):
             "r_y": r_y,
             "r_z": r_z
         })
+        rtn.append(dict)
 
     return rtn
 
