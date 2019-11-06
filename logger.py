@@ -28,13 +28,17 @@ if button not in button_options:
     print("Supported buttons: " + button_options)
 
 
-def transform_movements(data, sid, controller):
+def transform_movements(data, sid, controller, user_id):
     rtn = []
 
     for timestamp, x, y, z, yaw, pitch, roll, r_x, r_y, r_z in zip(data["time"], data['x'], data['y'], data['z'],
                                                                    data['yaw'], data['pitch'], data['roll'],
                                                                    data['r_x'], data['r_y'], data['r_z']):
-        rtn.append({
+
+        dict = {"session_id": sid}
+        if user_id is not None:
+            dict.update({"user_id": user_id})
+        dict.update({
             "session_id": sid,
             "timestamp": timestamp,
             "controller_id": controller,
@@ -48,6 +52,7 @@ def transform_movements(data, sid, controller):
             "r_y": r_y,
             "r_z": r_z
         })
+        rtn.append(dict)
 
     return rtn
 
@@ -64,7 +69,7 @@ def is_recording(d):
     return d.get_controller_inputs()[button] > 0
 
 
-def sample(vr_device, num_samples, sample_rate, session_id):
+def sample(vr_device, num_samples, sample_rate, session_id, user_id):
     interval = 1 / sample_rate
     poses = vr.pose_sample_buffer()
     input_states = []
@@ -78,6 +83,8 @@ def sample(vr_device, num_samples, sample_rate, session_id):
         input_states[i]['timestamp'] = time.time() - sample_start
         input_states[i]['session_id'] = session_id
         input_states[i]['controller_id'] = controller_serial
+        if user_id is not None:
+            input_states[i]['user_id'] = user_id
         i += 1
         sleep_time = interval - (time.time() - start)
         if sleep_time > 0:
@@ -85,8 +92,19 @@ def sample(vr_device, num_samples, sample_rate, session_id):
     return poses, input_states
 
 
+def post_record(api_client, movements, buttons):
+    try:
+        api_response = api_client.post_logger_record(payload={"movements": movements, "buttons": buttons})
+        pprint(api_response)
+    except ApiException as e:
+        print("Exception when calling LoggerApi->post_logger_record: %s\n" % e)
+
+
 sid = uuid.uuid4().hex[0:sid_length]
-device = None
+
+api_client = swagger_client.LoggerApi()
+api_client.api_client.configuration.host = api_host
+
 try:
     v = vr.triad_openvr()
 
@@ -98,32 +116,33 @@ try:
         print('No controller found. Exiting.')
         exit(2)
 
-    print('Waiting for input... Press recording button to start recording movement. Release to stop.')
-    while device is None:
-        time.sleep(0.1)
+    user = None
+    response = input('Do you wish to label logged data with a specific user? [y/n]')
+    if response == 'y':
+        user = input('Type the name of user: ')
+
+    print('Logger ready. Press recording button to start recording movement. Release to stop.')
+
+    while True:
+        # time.sleep(0.1)
         device = recording_device(controllers)
 
-    controller_serial = device.get_serial()
-    print("Recording movement on controller " + controller_serial)
-    data, buttons = sample(device, 150, sampling_rate, sid)
-    print("Recording stopped")
-    movements = transform_movements(data.__dict__, sid, controller_serial)
+        if device is not None:
+            controller_serial = device.get_serial()
+            print("Recording movement on controller " + controller_serial)
+            data, buttons = sample(device, 150, sampling_rate, sid, user)
+            print("Recording stopped")
+            movements = transform_movements(data.__dict__, sid, controller_serial, user)
+            post_record(api_client, movements, buttons)
+
 except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
     f = open('data/example_movements.json', 'r')
     data = json.load(f)
-    movements = transform_movements(data, "TEST_SESSION", "EXAMPLE")
+    movements = transform_movements(data, "TEST_SESSION", "EXAMPLE", None)
     f = open("data/example_buttons.json", "r")
     buttons = json.load(f)
     f.close()
 
-api_client = swagger_client.LoggerApi()
-
 print(movements)
-
-try:
-    api_client.api_client.configuration.host = api_host
-    api_response = api_client.post_logger_record(payload={"movements": movements, "buttons": buttons})
-    pprint(api_response)
-except ApiException as e:
-    print("Exception when calling LoggerApi->post_logger_record: %s\n" % e)
+post_record(api_client, movements, buttons)
