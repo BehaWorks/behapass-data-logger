@@ -100,7 +100,6 @@ def post_record(api_client, movements, buttons):
         print("Exception when calling LoggerApi->post_logger_record: %s\n" % e)
 
 
-sid = uuid.uuid4().hex[0:sid_length]
 
 api_client = swagger_client.LoggerApi()
 api_client.api_client.configuration.host = api_host
@@ -122,18 +121,22 @@ try:
         user = input('Type the name of user: ')
 
     print('Logger ready. Press recording button to start recording movement. Release to stop.')
+    i = 1
 
     while True:
         # time.sleep(0.1)
         device = recording_device(controllers)
 
         if device is not None:
+            sid = uuid.uuid4().hex[0:sid_length]
             controller_serial = device.get_serial()
             print("Recording movement on controller " + controller_serial)
             data, buttons = sample(device, 150, sampling_rate, sid, user)
             print("Recording stopped")
             movements = transform_movements(data.__dict__, sid, controller_serial, user)
             post_record(api_client, movements, buttons)
+            print(i)
+            i = i + 1
 
 except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
