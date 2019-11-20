@@ -69,7 +69,6 @@ def recording_device(devices):
 def is_recording(d):
     return d.get_controller_inputs()[button] > 0
 
-
 def sample(controller, hmd, num_samples, sample_rate, session_id, user_id):
     interval = 1 / sample_rate
     hmd_poses = vr.pose_sample_buffer()
@@ -158,9 +157,6 @@ try:
                 while is_recording(controller):
                     pass
 
-
-
-
 except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
     f = open('data/example_movements.json', 'r')
@@ -171,4 +167,4 @@ except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     f.close()
 
 print(movements)
-#post_record(api_client, movements, buttons)
+post_record(api_client, movements, buttons)
