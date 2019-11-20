@@ -5,6 +5,7 @@ from pprint import pprint
 import openvr
 import swagger_client
 import time
+from datetime import datetime
 from swagger_client.rest import ApiException
 
 import triad_openvr as vr
@@ -68,18 +69,23 @@ def recording_device(devices):
 def is_recording(d):
     return d.get_controller_inputs()[button] > 0
 
-
-def sample(vr_device, num_samples, sample_rate, session_id, user_id):
+def sample(controller, hmd, num_samples, sample_rate, session_id, user_id):
     interval = 1 / sample_rate
-    poses = vr.pose_sample_buffer()
+    hmd_poses = vr.pose_sample_buffer()
+    controller_poses = vr.pose_sample_buffer()
     input_states = []
     sample_start = time.time()
     i = 0
-    while is_recording(vr_device):
+    while is_recording(controller):
         start = time.time()
-        pose = vr.get_pose(vr_device.vr)
-        poses.append(pose[vr_device.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
-        input_states.append(vr_device.get_controller_inputs())
+
+        controller_pose = vr.get_pose(controller.vr)
+        controller_poses.append(controller_pose[controller.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
+
+        hmd_pose = vr.get_pose(hmd.vr)
+        hmd_poses.append(hmd_pose[hmd.index].mDeviceToAbsoluteTracking, time.time() - sample_start)
+
+        input_states.append(controller.get_controller_inputs())
         input_states[i]['timestamp'] = time.time() - sample_start
         input_states[i]['session_id'] = session_id
         input_states[i]['controller_id'] = controller_serial
@@ -89,16 +95,15 @@ def sample(vr_device, num_samples, sample_rate, session_id, user_id):
         sleep_time = interval - (time.time() - start)
         if sleep_time > 0:
             time.sleep(sleep_time)
-    return poses, input_states
+    return controller_poses, hmd_poses, input_states
 
 
-def post_record(api_client, movements, buttons):
+def post_record(api_client, controller_movements, hmd_movements, buttons):
     try:
-        api_response = api_client.post_logger_record(payload={"movements": movements, "buttons": buttons})
+        api_response = api_client.post_logger_record(payload={"movements": controller_movements + hmd_movements, "buttons": buttons})
         pprint(api_response)
     except ApiException as e:
         print("Exception when calling LoggerApi->post_logger_record: %s\n" % e)
-
 
 
 api_client = swagger_client.LoggerApi()
@@ -109,11 +114,14 @@ try:
 
     print("Finding controllers...")
     controllers = []
+    hmd = None
     for object_name in v.object_names['Controller']:
         controllers.append(v.devices[object_name])
     if len(controllers) is 0:
         print('No controller found. Exiting.')
         exit(2)
+    for object_name in v.object_names['HMD']:
+        hmd = v.devices[object_name]
 
     user = None
     response = input('Do you wish to label logged data with a specific user? [y/n]')
@@ -125,18 +133,29 @@ try:
 
     while True:
         # time.sleep(0.1)
-        device = recording_device(controllers)
+        controller = recording_device(controllers)
 
-        if device is not None:
-            sid = uuid.uuid4().hex[0:sid_length]
-            controller_serial = device.get_serial()
+        if controller is not None:
+            sid = str(datetime.now().strftime("%Y/%m/%d-%H:%M:%S-")) + uuid.uuid4().hex[0:sid_length]
+            controller_serial = controller.get_serial()
             print("Recording movement on controller " + controller_serial)
-            data, buttons = sample(device, 150, sampling_rate, sid, user)
-            print("Recording stopped")
-            movements = transform_movements(data.__dict__, sid, controller_serial, user)
-            post_record(api_client, movements, buttons)
-            print(i)
-            i = i + 1
+            hmd_serial = hmd.get_serial()
+            print("Recording movement on HMD " + hmd_serial)
+            try:
+                controller_data, hmd_data, buttons = sample(controller, hmd, 150, sampling_rate, sid, user)
+                print("Recording stopped")
+                controller_movements = transform_movements(controller_data.__dict__, sid, controller_serial, user)
+                hmd_movements = transform_movements(hmd_data.__dict__, sid, hmd_serial, user)
+
+                post_record(api_client, controller_movements, hmd_movements, buttons)
+                print(i)
+                i = i + 1
+            except ZeroDivisionError:
+                print("Float division by zero")
+                controller2 = recording_device(controllers)
+
+                while is_recording(controller):
+                    pass
 
 except openvr.error_code.InitError_Init_HmdNotFoundPresenceFailed:
     print('VR initialisation error (is HMD connected and SteamVR running?), using example data...')
