@@ -10,6 +10,8 @@ from swagger_client.rest import ApiException
 
 import triad_openvr as vr
 
+HEADSET, CONTROLLER_1, CONTROLLER_2 = "hmd", "controller-1", "controller-2"
+
 config = None
 
 try:
@@ -29,7 +31,7 @@ if button not in button_options:
     print("Supported buttons: " + button_options)
 
 
-def transform_movements(data, sid, controller, user_id):
+def transform_movements(data, sid, device_id, user_id):
     rtn = []
 
     for timestamp, x, y, z, yaw, pitch, roll, r_x, r_y, r_z in zip(data["time"], data['x'], data['y'], data['z'],
@@ -42,7 +44,7 @@ def transform_movements(data, sid, controller, user_id):
         dict.update({
             "session_id": sid,
             "timestamp": timestamp,
-            "controller_id": controller,
+            "controller_id": device_id,
             "x": x,
             "y": y,
             "z": z,
@@ -144,8 +146,8 @@ try:
             try:
                 controller_data, hmd_data, buttons = sample(controller, hmd, 150, sampling_rate, sid, user)
                 print("Recording stopped")
-                controller_movements = transform_movements(controller_data.__dict__, sid, controller_serial, user)
-                hmd_movements = transform_movements(hmd_data.__dict__, sid, hmd_serial, user)
+                controller_movements = transform_movements(controller_data.__dict__, sid, CONTROLLER_1, user)
+                hmd_movements = transform_movements(hmd_data.__dict__, sid, HEADSET, user)
 
                 post_record(api_client, controller_movements, hmd_movements, buttons)
                 print(i)
