@@ -1,2 +1,2 @@
-git+https://bitbucket.org/behaworks/logger-python-client.git
+git+https://github.com/BehaWorks/logger-python-client.git
 openvr==1.7.1501
