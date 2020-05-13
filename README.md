@@ -9,6 +9,7 @@ Pre správne fungovanie treba mať nainštalované [SteamVR](https://store.steam
 2. V priečinku repozitára nainštalovať závislosti: `pip install -r requirements.txt`.  
 3. Do priečinka repozitára manuálne stiahnuť knižnicu [Triad OpenVR](https://github.com/TriadSemi/triad_openvr). Stačí stiahnuť súbor `triad_openvr.py`.  
 4. Pri prvej inštalácii treba vytvoriť súbor `config/config.json`, forma podľa `config/example_config.json` (stačí skopírovať a premenovať).
+5. Aplikácia sa spúšťa súborom `logger.py`.
 
 ## Fungovanie
 1. Logger zistí počet pripojených ovládačov.  
