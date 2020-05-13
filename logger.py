@@ -1,12 +1,12 @@
 import json
 import uuid
+from datetime import datetime
 from pprint import pprint
 
+import behapass_client
 import openvr
-import swagger_client
 import time
-from datetime import datetime
-from swagger_client.rest import ApiException
+from behapass_client.rest import ApiException
 
 import triad_openvr as vr
 
@@ -108,7 +108,7 @@ def post_record(api_client, controller_movements, hmd_movements, buttons):
         print("Exception when calling LoggerApi->post_logger_record: %s\n" % e)
 
 
-api_client = swagger_client.LoggerApi()
+api_client = behapass_client.LoggerApi()
 api_client.api_client.configuration.host = api_host
 
 try:
